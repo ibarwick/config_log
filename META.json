@@ -1,0 +1,34 @@
+{
+   "name": "config_log",
+   "abstract": "A custom background worker process to log changes to postgresql.conf to a table",
+   "version": "0.1.0",
+   "maintainer": "Ian Barwick <barwick@gmail.com>",
+   "license": {
+      "PostgreSQL": "http://www.postgresql.org/about/licence"
+   },
+   "prereqs": {
+      "runtime": {
+         "requires": {
+            "PostgreSQL": "9.3.0"
+         }
+      }
+   },
+   "provides": {
+      "config_log": {
+         "abstract": "A custom background worker process to log changes to postgresql.conf to a table",
+         "file": "config_log--0.1.sql",
+         "docfile": "README.md",
+         "version": "0.1.0"
+      }
+   },
+   "meta-spec": {
+      "version": "1.0.0",
+      "url": "http://pgxn.org/meta/spec.txt"
+   },
+   "generated_by": "Ian Barwick",
+   "tags": [
+      "custom background worker",
+	  "bgw",
+	  "postgresql.conf"
+   ]
+}

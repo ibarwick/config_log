@@ -1,4 +1,4 @@
-config_log 0.1.0
+config_log 0.1.1
 ================
 
 config_log is an experimental extension which implements a custom
@@ -49,3 +49,16 @@ This will install the database objects required for this extension.
 Following this step, the module must be added to postgresql.conf's 
 'shared_preload_libraries' parameter and the server restarted.
 
+Usage
+-----
+
+For more information please see these blog posts:
+
+http://sql-info.de/postgresql/notes/custom-background-worker-bgw-practical-example.html
+http://sql-info.de/postgresql/notes/logging-changes-to-postgresql-conf.html
+
+Links
+-----
+
+Github: https://github.com/ibarwick/config_log
+PGXN: http://www.pgxn.org/dist/config_log/

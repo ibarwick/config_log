@@ -1,7 +1,7 @@
 {
    "name": "config_log",
    "abstract": "A custom background worker process to log changes to postgresql.conf to a table",
-   "version": "0.1.0",
+   "version": "0.1.1",
    "maintainer": "Ian Barwick <barwick@gmail.com>",
    "license": {
       "PostgreSQL": "http://www.postgresql.org/about/licence"
@@ -18,7 +18,14 @@
          "abstract": "A custom background worker process to log changes to postgresql.conf to a table",
          "file": "config_log--0.1.sql",
          "docfile": "README.md",
-         "version": "0.1.0"
+         "version": "0.1.1"
+      }
+   },
+   "resources": {
+      "repository": {
+        "url":  "git://github.com/ibarwick/config_log.git",
+        "web":  "https://github.com/ibarwick/config_log",
+        "type": "git"
       }
    },
    "meta-spec": {

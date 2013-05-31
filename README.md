@@ -2,7 +2,7 @@ config_log 0.1.1
 ================
 
 config_log is an experimental extension which implements a custom
-background worker to monitor postgresql.conf and record any changes to 
+background worker to monitor postgresql.conf and record any changes to
 a database table.
 
 config_log requires PostgreSQL 9.3 or later and will not work
@@ -54,11 +54,11 @@ Usage
 
 For more information please see these blog posts:
 
-http://sql-info.de/postgresql/notes/custom-background-worker-bgw-practical-example.html
-http://sql-info.de/postgresql/notes/logging-changes-to-postgresql-conf.html
+- http://sql-info.de/postgresql/notes/custom-background-worker-bgw-practical-example.html
+- http://sql-info.de/postgresql/notes/logging-changes-to-postgresql-conf.html
 
 Links
 -----
 
-Github: https://github.com/ibarwick/config_log
-PGXN: http://www.pgxn.org/dist/config_log/
+- [Github](https://github.com/ibarwick/config_log)
+- [PGXN](http://www.pgxn.org/dist/config_log/)

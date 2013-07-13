@@ -1,6 +1,6 @@
 # config_log extension
 comment = 'custom background worker process to log changes to postgresql.conf to a table'
-default_version = '0.1.3'
+default_version = '0.1.4'
 module_pathname = '$libdir/config_log'
 relocatable = false
 superuser = true

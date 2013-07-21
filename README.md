@@ -1,4 +1,4 @@
-config_log 0.1.4
+config_log 0.1.5
 ================
 
 config_log is an experimental extension which implements a custom

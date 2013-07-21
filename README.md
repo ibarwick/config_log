@@ -82,12 +82,12 @@ Usage
 
 For more information please see these blog posts:
 
-- http://sql-info.de/postgresql/notes/custom-background-worker-bgw-practical-example.html
-- http://sql-info.de/postgresql/notes/logging-changes-to-postgresql-conf.html
+- [sql-info.de: Custom Background Worker: a practical example](http://sql-info.de/postgresql/notes/custom-background-worker-bgw-practical-example.html)
+- [sql-info.de: Logging changes to postgresql.conf](http://sql-info.de/postgresql/notes/logging-changes-to-postgresql-conf.html)
 
 Links
 -----
 
-- [Github](https://github.com/ibarwick/config_log)
-- [PGXN](http://www.pgxn.org/dist/config_log/)
-- [PostgreSQL documentation](http://www.postgresql.org/docs/9.3/static/bgworker.html)
+- config_log repository at [Github](https://github.com/ibarwick/config_log)
+- config_log project page at [PGXN](http://www.pgxn.org/dist/config_log/)
+- [PostgreSQL documentation](http://www.postgresql.org/docs/9.3/static/index.html): [Background Worker Processes](http://www.postgresql.org/docs/9.3/static/bgworker.html)

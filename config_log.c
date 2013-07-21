@@ -4,8 +4,10 @@
  * PostgreSQL extension with custom background worker to monitor 
  * and record changes to postgresql.conf (experimental)
  *
- * TODO:
- *  - replace elog() with ereport()?
+ * NOTES:
+ * - custom background workers are available from PostgreSQL 9.3
+ * - the background worker API is not fully finalized and 
+ *   may change before final release (see also note in '_PG_init()')
  *
  * Written by Ian Barwick
  * barwick@gmail.com
@@ -43,9 +45,13 @@ void _PG_init(void);
 static volatile sig_atomic_t got_sighup = false;
 static volatile sig_atomic_t got_sigterm = false;
 
+/* GUC variables */
+static char * config_log_database = NULL;
+static char * config_log_schema   = NULL;
+
+
 typedef struct config_log_objects
 {
-	const char	   *schema;
 	const char	   *table_name;
 	const char	   *function_name;
 } config_log_objects;
@@ -57,7 +63,7 @@ static void log_info(char *msg);
 static void
 config_log_sigterm(SIGNAL_ARGS)
 {
-	int			save_errno = errno;
+	int	save_errno = errno;
 
 	got_sigterm = true;
 	if (MyProc) 
@@ -82,10 +88,11 @@ config_log_sighup(SIGNAL_ARGS)
 
 static void
 log_info(char *msg) {
-	elog(LOG, "%s: %s",
-		 MyBgworkerEntry->bgw_name,
-		 msg
-		);
+	ereport(LOG, 
+      (errmsg("%s: %s",
+        MyBgworkerEntry->bgw_name,
+        msg
+    )));
 }
 
 
@@ -107,8 +114,6 @@ initialize_objects(void)
 
 	objects = palloc(sizeof(config_log_objects));
 
-	/* TODO : make schema/object names configurable */
-	objects->schema = pstrdup("public");
 	objects->table_name = pstrdup("pg_settings_log");
 	objects->function_name = pstrdup("pg_settings_logger");
  
@@ -121,17 +126,24 @@ initialize_objects(void)
 	initStringInfo(&buf);
 	appendStringInfo(
 		&buf, 
-		"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='%s' AND table_name ='%s'",
-		objects->schema,
+		"SELECT COUNT(*)\
+           FROM information_schema.tables\
+          WHERE table_schema='%s'\
+            AND table_name ='%s'\
+            AND table_type='BASE TABLE'",
+		config_log_schema,
 		objects->table_name 
 		);
 
 	ret = SPI_execute(buf.data, true, 0);
 	if (ret != SPI_OK_SELECT) 
 	{
-		elog(FATAL, "SPI_execute failed: error code %d", ret);
+         ereport(FATAL, 
+           (errmsg("SPI_execute failed: SPI error code %d", ret)
+            ));
 	}
 
+    /* This should never happen */
 	if (SPI_processed != 1)
 	{	
 		elog(FATAL, "not a singleton result");
@@ -140,6 +152,8 @@ initialize_objects(void)
 	ntup = DatumGetInt32(SPI_getbinval(SPI_tuptable->vals[0],
 					   SPI_tuptable->tupdesc,
 					   1, &isnull));
+
+    /* This should never happen */
 	if (isnull)
 	{
 		elog(FATAL, "null result");
@@ -147,8 +161,13 @@ initialize_objects(void)
 	
 	if (ntup == 0)
 	{
-		elog(FATAL, "Expected config log table '%s.%s' not found", objects->schema,
-			 objects->table_name );
+        ereport(FATAL, 
+          (
+            errmsg("Expected config log table '%s.%s' not found", config_log_schema,
+              objects->table_name),
+            errhint("Ensure superuser search_path includes the schema used by config_log; "
+              "check config_log.* GUC settings")
+           ));
 	}
 
 	/* check unction pg_settings_logger() exists */
@@ -163,13 +182,15 @@ initialize_objects(void)
             AND n.nspname='%s' \
             AND p.pronargs = 0",
 		objects->function_name,
-		objects->schema
+		config_log_schema
 		);
 
 	ret = SPI_execute(buf.data, true, 0);
 	if (ret != SPI_OK_SELECT) 
 	{
-		elog(FATAL, "SPI_execute failed: error code %d", ret);
+         ereport(FATAL, 
+           (errmsg("SPI_execute failed: SPI error code %d", ret)
+            ));
 	}
 
 	if (SPI_processed != 1)
@@ -187,9 +208,13 @@ initialize_objects(void)
 
 	if (ntup == 0)
 	{
-		elog(FATAL, "Expected config log function '%s.%s' not found",
-			 objects->schema,
-			 objects->function_name );
+        ereport(FATAL, 
+          (
+            errmsg("Expected config log function '%s.%s' not found", config_log_schema,
+              objects->function_name),
+            errhint("Ensure superuser search_path includes the schema used by config_log; "
+              "check config_log.* GUC settings")
+           ));
 	}
 
    	SPI_finish();
@@ -225,7 +250,7 @@ execute_pg_settings_logger(config_log_objects *objects) {
 	appendStringInfo(
 		&buf, 
 		"SELECT %s.%s()",
-		objects->schema,
+		config_log_schema,
 		objects->function_name
 		);
 
@@ -269,8 +294,7 @@ config_log_main(void *main_arg)
 	BackgroundWorkerUnblockSignals();
 
 	/* Connect to database */
-	/* TODO: make this configurable */
-	BackgroundWorkerInitializeConnection("postgres", NULL);
+	BackgroundWorkerInitializeConnection(config_log_database, NULL);
 
 	/* Verify expected objects exist */
 	objects = initialize_objects();
@@ -292,12 +316,12 @@ config_log_main(void *main_arg)
 		 * In case of a SIGHUP, just reload the configuration.
 		 */
 		if (got_sighup)
-        	{
-            		got_sighup = false;
-            		ProcessConfigFile(PGC_SIGHUP);
-			execute_pg_settings_logger(objects);
-        	}	
-    	}
+          {
+              got_sighup = false;
+              ProcessConfigFile(PGC_SIGHUP);
+              execute_pg_settings_logger(objects);
+          }	
+    }
 
 	proc_exit(0);
 }
@@ -311,13 +335,45 @@ _PG_init(void)
 {
 	BackgroundWorker	worker;
 
+	/* get GUC settings, if available */
+    
+	DefineCustomStringVariable( 
+      "config_log.database",
+      "Database used for config_log",
+      "Database used to store config_log records (default: postgres).",
+      &config_log_database,
+      "postgres",
+      PGC_POSTMASTER,
+      0,
+      NULL,
+      NULL,
+      NULL 
+    );
+
+	DefineCustomStringVariable( 
+      "config_log.schema",
+      "Schema used for config_log",
+      "Schema used to store config_log records (default: public).",
+      &config_log_schema,
+      "public",
+      PGC_POSTMASTER,
+      0,
+      NULL,
+      NULL,
+      NULL 
+    );
+
 	/* register the worker processes */
 	worker.bgw_flags = BGWORKER_SHMEM_ACCESS |
 		BGWORKER_BACKEND_DATABASE_CONNECTION;
 	worker.bgw_start_time = BgWorkerStart_RecoveryFinished;
 	worker.bgw_main = config_log_main;
+
+    /* 2013-07-20: bgw_sighup and bgw_sigterm may be removed; */
+    /* See: http://www.postgresql.org/message-id/20130719125250.GH20525@alap2.anarazel.de */
 	worker.bgw_sighup = config_log_sighup;
 	worker.bgw_sigterm = config_log_sigterm;
+
 	/* this value is shown in the process list */
 	worker.bgw_name = "config_log";
 	worker.bgw_restart_time = 1;

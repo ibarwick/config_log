@@ -2,6 +2,5 @@
 comment = 'custom background worker process to log changes to postgresql.conf to a table'
 default_version = '0.1.4'
 module_pathname = '$libdir/config_log'
-relocatable = false
+relocatable = true
 superuser = true
-schema = public

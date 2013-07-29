@@ -286,9 +286,12 @@ execute_pg_settings_logger(config_log_objects *objects) {
 
 
 static void
-config_log_main(void *main_arg)
+config_log_main(Datum main_arg)
 {
 	config_log_objects	   *objects;
+
+	pqsignal(SIGTERM, config_log_sighup);
+	pqsignal(SIGHUP,  config_log_sigterm);
 
 	/* We're now ready to receive signals */
 	BackgroundWorkerUnblockSignals();
@@ -369,15 +372,11 @@ _PG_init(void)
 	worker.bgw_start_time = BgWorkerStart_RecoveryFinished;
 	worker.bgw_main = config_log_main;
 
-    /* 2013-07-20: bgw_sighup and bgw_sigterm may be removed; */
-    /* See: http://www.postgresql.org/message-id/20130719125250.GH20525@alap2.anarazel.de */
-	worker.bgw_sighup = config_log_sighup;
-	worker.bgw_sigterm = config_log_sigterm;
+	worker.bgw_restart_time = 1;
+	worker.bgw_main_arg = (Datum) 0;
 
 	/* this value is shown in the process list */
-	worker.bgw_name = "config_log";
-	worker.bgw_restart_time = 1;
-	worker.bgw_main_arg = NULL;
+	snprintf(worker.bgw_name, BGW_MAXLEN, "config_log");
 
 	RegisterBackgroundWorker(&worker);
 }

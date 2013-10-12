@@ -170,7 +170,7 @@ initialize_objects(void)
            ));
 	}
 
-	/* check unction pg_settings_logger() exists */
+	/* check function pg_settings_logger() exists */
 
 	resetStringInfo(&buf);
 
@@ -290,8 +290,8 @@ config_log_main(Datum main_arg)
 {
 	config_log_objects	   *objects;
 
-	pqsignal(SIGTERM, config_log_sighup);
-	pqsignal(SIGHUP,  config_log_sigterm);
+	pqsignal(SIGTERM, config_log_sigterm);
+	pqsignal(SIGHUP,  config_log_sighup);
 
 	/* We're now ready to receive signals */
 	BackgroundWorkerUnblockSignals();

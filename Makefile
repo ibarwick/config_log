@@ -5,7 +5,7 @@ EXTENSION 	= config_log
 EXTVERSION 	= $(shell grep default_version $(EXTENSION).control | \
 			  sed -e "s/default_version[[:space:]]*=[[:space:]]*'\([^']*\)'/\1/")
 
-DATA = config_log--0.1.6.sql
+DATA = config_log--0.1.7.sql
 
 PG_CONFIG	= pg_config
 

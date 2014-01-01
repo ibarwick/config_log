@@ -1,12 +1,12 @@
 /*
  * config_log.c
  *
- * PostgreSQL extension with custom background worker to monitor 
+ * PostgreSQL extension with custom background worker to monitor
  * and record changes to postgresql.conf (experimental)
  *
  * NOTES:
  * - custom background workers are available from PostgreSQL 9.3
- * - the background worker API is not fully finalized and 
+ * - the background worker API is not fully finalized and
  *   may change before final release (see also note in '_PG_init()')
  *
  * Written by Ian Barwick
@@ -66,7 +66,7 @@ config_log_sigterm(SIGNAL_ARGS)
 	int	save_errno = errno;
 
 	got_sigterm = true;
-	if (MyProc) 
+	if (MyProc)
 	{
 		SetLatch(&MyProc->procLatch);
 	}
@@ -88,7 +88,7 @@ config_log_sighup(SIGNAL_ARGS)
 
 static void
 log_info(char *msg) {
-	ereport(LOG, 
+	ereport(LOG,
       (errmsg("%s: %s",
         MyBgworkerEntry->bgw_name,
         msg
@@ -101,7 +101,7 @@ log_info(char *msg) {
  * Initialize objects
  *
  */
- 
+
 config_log_objects *
 initialize_objects(void)
 {
@@ -116,7 +116,7 @@ initialize_objects(void)
 
 	objects->table_name = pstrdup("pg_settings_log");
 	objects->function_name = pstrdup("pg_settings_logger");
- 
+
 	SetCurrentStatementStartTimestamp();
 	StartTransactionCommand();
 	SPI_connect();
@@ -125,27 +125,27 @@ initialize_objects(void)
 
 	initStringInfo(&buf);
 	appendStringInfo(
-		&buf, 
+		&buf,
 		"SELECT COUNT(*)\
            FROM information_schema.tables\
           WHERE table_schema='%s'\
             AND table_name ='%s'\
             AND table_type='BASE TABLE'",
 		config_log_schema,
-		objects->table_name 
+		objects->table_name
 		);
 
 	ret = SPI_execute(buf.data, true, 0);
-	if (ret != SPI_OK_SELECT) 
+	if (ret != SPI_OK_SELECT)
 	{
-         ereport(FATAL, 
+         ereport(FATAL,
            (errmsg("SPI_execute failed: SPI error code %d", ret)
             ));
 	}
 
     /* This should never happen */
 	if (SPI_processed != 1)
-	{	
+	{
 		elog(FATAL, "not a singleton result");
 	}
 
@@ -158,10 +158,10 @@ initialize_objects(void)
 	{
 		elog(FATAL, "null result");
 	}
-	
+
 	if (ntup == 0)
 	{
-        ereport(FATAL, 
+        ereport(FATAL,
           (
             errmsg("Expected config log table '%s.%s' not found", config_log_schema,
               objects->table_name),
@@ -175,7 +175,7 @@ initialize_objects(void)
 	resetStringInfo(&buf);
 
 	appendStringInfo(
-		&buf, 
+		&buf,
 		"SELECT COUNT(*) FROM pg_catalog.pg_proc p \
      INNER JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace \
           WHERE p.proname='%s' \
@@ -186,9 +186,9 @@ initialize_objects(void)
 		);
 
 	ret = SPI_execute(buf.data, true, 0);
-	if (ret != SPI_OK_SELECT) 
+	if (ret != SPI_OK_SELECT)
 	{
-         ereport(FATAL, 
+         ereport(FATAL,
            (errmsg("SPI_execute failed: SPI error code %d", ret)
             ));
 	}
@@ -201,14 +201,14 @@ initialize_objects(void)
 	ntup = DatumGetInt32(SPI_getbinval(SPI_tuptable->vals[0],
 					   SPI_tuptable->tupdesc,
 					   1, &isnull));
-	if (isnull) 
+	if (isnull)
 	{
 		elog(FATAL, "null result");
 	}
 
 	if (ntup == 0)
 	{
-        ereport(FATAL, 
+        ereport(FATAL,
           (
             errmsg("Expected config log function '%s.%s' not found", config_log_schema,
               objects->function_name),
@@ -231,7 +231,7 @@ initialize_objects(void)
 }
 
 
-static void 
+static void
 execute_pg_settings_logger(config_log_objects *objects) {
 
 	int		ret;
@@ -248,7 +248,7 @@ execute_pg_settings_logger(config_log_objects *objects) {
 	initStringInfo(&buf);
 
 	appendStringInfo(
-		&buf, 
+		&buf,
 		"SELECT %s.%s()",
 		config_log_schema,
 		objects->function_name
@@ -265,15 +265,15 @@ execute_pg_settings_logger(config_log_objects *objects) {
 		elog(FATAL, "not a singleton result");
 	}
 
-	log_info("pg_settings_logger() executed"); 
-	
+	log_info("pg_settings_logger() executed");
+
 	if(DatumGetBool(SPI_getbinval(SPI_tuptable->vals[0],
 				  SPI_tuptable->tupdesc,
-				  1, &isnull))) 
+				  1, &isnull)))
 	{
 		log_info("Configuration changes recorded");
 	}
-	else 
+	else
 	{
 		log_info("No configuration changes detected");
 	}
@@ -323,7 +323,7 @@ config_log_main(Datum main_arg)
               got_sighup = false;
               ProcessConfigFile(PGC_SIGHUP);
               execute_pg_settings_logger(objects);
-          }	
+          }
     }
 
 	proc_exit(0);
@@ -339,8 +339,8 @@ _PG_init(void)
 	BackgroundWorker	worker;
 
 	/* get GUC settings, if available */
-    
-	DefineCustomStringVariable( 
+
+	DefineCustomStringVariable(
       "config_log.database",
       "Database used for config_log",
       "Database used to store config_log records (default: postgres).",
@@ -350,10 +350,10 @@ _PG_init(void)
       0,
       NULL,
       NULL,
-      NULL 
+      NULL
     );
 
-	DefineCustomStringVariable( 
+	DefineCustomStringVariable(
       "config_log.schema",
       "Schema used for config_log",
       "Schema used to store config_log records (default: public).",
@@ -363,7 +363,7 @@ _PG_init(void)
       0,
       NULL,
       NULL,
-      NULL 
+      NULL
     );
 
 	/* register the worker processes */
@@ -380,4 +380,3 @@ _PG_init(void)
 
 	RegisterBackgroundWorker(&worker);
 }
-

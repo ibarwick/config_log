@@ -375,6 +375,10 @@ _PG_init(void)
 	worker.bgw_restart_time = 1;
 	worker.bgw_main_arg = (Datum) 0;
 
+#if PG_VERSION_NUM >= 90400
+	worker.bgw_notify_pid = 0;
+#endif
+
 	/* this value is shown in the process list */
 	snprintf(worker.bgw_name, BGW_MAXLEN, "config_log");
 

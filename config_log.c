@@ -56,7 +56,7 @@ typedef struct config_log_objects
 	const char	   *function_name;
 } config_log_objects;
 
-config_log_objects *initialize_objects(void);
+static config_log_objects *initialize_objects(void);
 static void execute_pg_settings_logger(config_log_objects *objects);
 static void log_info(char *msg);
 
@@ -102,7 +102,7 @@ log_info(char *msg) {
  *
  */
 
-config_log_objects *
+static config_log_objects *
 initialize_objects(void)
 {
     config_log_objects *objects;
@@ -189,8 +189,7 @@ initialize_objects(void)
 	if (ret != SPI_OK_SELECT)
 	{
          ereport(FATAL,
-           (errmsg("SPI_execute failed: SPI error code %d", ret)
-            ));
+           (errmsg("SPI_execute failed: SPI error code %d", ret)));
 	}
 
 	if (SPI_processed != 1)
@@ -199,8 +198,8 @@ initialize_objects(void)
 	}
 
 	ntup = DatumGetInt32(SPI_getbinval(SPI_tuptable->vals[0],
-					   SPI_tuptable->tupdesc,
-					   1, &isnull));
+									   SPI_tuptable->tupdesc,
+									   1, &isnull));
 	if (isnull)
 	{
 		elog(FATAL, "null result");
@@ -319,11 +318,11 @@ config_log_main(Datum main_arg)
 		 * In case of a SIGHUP, just reload the configuration.
 		 */
 		if (got_sighup)
-          {
+		{
               got_sighup = false;
               ProcessConfigFile(PGC_SIGHUP);
               execute_pg_settings_logger(objects);
-          }
+		}
     }
 
 	proc_exit(0);
@@ -341,29 +340,29 @@ _PG_init(void)
 	/* get GUC settings, if available */
 
 	DefineCustomStringVariable(
-      "config_log.database",
-      "Database used for config_log",
-      "Database used to store config_log records (default: postgres).",
-      &config_log_database,
-      "postgres",
-      PGC_POSTMASTER,
-      0,
-      NULL,
-      NULL,
-      NULL
+		"config_log.database",
+		"Database used for config_log",
+		"Database used to store config_log records (default: postgres).",
+		&config_log_database,
+		"postgres",
+		PGC_POSTMASTER,
+		0,
+		NULL,
+		NULL,
+		NULL
     );
 
 	DefineCustomStringVariable(
-      "config_log.schema",
-      "Schema used for config_log",
-      "Schema used to store config_log records (default: public).",
-      &config_log_schema,
-      "public",
-      PGC_POSTMASTER,
-      0,
-      NULL,
-      NULL,
-      NULL
+		"config_log.schema",
+		"Schema used for config_log",
+		"Schema used to store config_log records (default: public).",
+		&config_log_schema,
+		"public",
+		PGC_POSTMASTER,
+		0,
+		NULL,
+		NULL,
+		NULL
     );
 
 	/* register the worker processes */

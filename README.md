@@ -1,14 +1,14 @@
 config_log 0.1.7
 ================
 
-config_log is an experimental extension which implements a custom
+`config_log` is an experimental extension which implements a custom
 background worker to monitor postgresql.conf and record any changes to
 a database table.
 
-config_log requires PostgreSQL 9.3 or later and will not work in earlier
+`config_log` requires PostgreSQL 9.3 or later and will not work in earlier
 versions.
 
-To build config_log, just do this:
+To build `config_log`, just do this:
 
     make
     make install
@@ -35,12 +35,12 @@ to find it:
 
     env PG_CONFIG=/path/to/pg_config make && make install
 
-Once config_log is compiled and installed, it needs to be added to a database
-in the PostgreSQL database cluster whose postgresql.conf you wish to monitor.
+Once `config_log` is compiled and installed, it needs to be added to a database
+in the PostgreSQL database cluster whose `postgresql.conf` you wish to monitor.
 It can only be installed in one database within the cluster.
 
-By default, config_log expects to be installed into the default 'postgres' 
-database's 'public' schema. The default values can be overridden by changing 
+By default, config_log expects to be installed into the default `postgres`
+database's `public` schema. The default values can be overridden by changing
 the following GUC settings:
 
     config_log.database = 'some_other_db'
@@ -54,13 +54,13 @@ Connect to the target database as a superuser and execute:
 
 This will install the database objects required for this extension.
 
-Following this step, the module must be added to postgresql.conf's 
-'shared_preload_libraries' parameter and the server restarted.
+Following this step, the module must be added to `postgresql.conf`'s
+`shared_preload_libraries` parameter and the server restarted.
 
 Log output
 ----------
 
-config_log will produce some log output, prefixed by "config_log:".
+`config_log` will produce some log output, prefixed by `config_log: `.
 
 Following a successful startup, it will output the following:
 
@@ -89,5 +89,5 @@ Links
 -----
 
 - config_log repository at [Github](https://github.com/ibarwick/config_log)
-- config_log project page at [PGXN](http://www.pgxn.org/dist/config_log/)
-- [PostgreSQL documentation](http://www.postgresql.org/docs/9.3/static/index.html): [Background Worker Processes](http://www.postgresql.org/docs/9.3/static/bgworker.html)
+- config_log project page at [PGXN](https://www.pgxn.org/dist/config_log/)
+- [PostgreSQL documentation](https://www.postgresql.org/docs/current/index.html): [Background Worker Processes](https://www.postgresql.org/docs/current/bgworker.html)

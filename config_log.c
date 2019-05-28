@@ -40,6 +40,9 @@ PG_MODULE_MAGIC;
 
 void _PG_init(void);
 
+#if PG_VERSION_NUM >= 100000
+void		config_log_main(Datum) pg_attribute_noreturn();
+#endif
 
 /* flags set by signal handlers */
 static volatile sig_atomic_t got_sighup = false;
@@ -66,10 +69,13 @@ config_log_sigterm(SIGNAL_ARGS)
 	int	save_errno = errno;
 
 	got_sigterm = true;
+
+#if PG_VERSION_NUM >= 90500
+	SetLatch(MyLatch);
+#else
 	if (MyProc)
-	{
 		SetLatch(&MyProc->procLatch);
-	}
+#endif
 
 	errno = save_errno;
 }
@@ -80,10 +86,12 @@ config_log_sighup(SIGNAL_ARGS)
 	log_info("received sighup");
 	got_sighup = true;
 
+#if PG_VERSION_NUM >= 90500
+	SetLatch(MyLatch);
+#else
 	if (MyProc)
-	{
 		SetLatch(&MyProc->procLatch);
-	}
+#endif
 }
 
 static void
@@ -266,9 +274,9 @@ execute_pg_settings_logger(config_log_objects *objects) {
 
 	log_info("pg_settings_logger() executed");
 
-	if(DatumGetBool(SPI_getbinval(SPI_tuptable->vals[0],
-				  SPI_tuptable->tupdesc,
-				  1, &isnull)))
+	if (DatumGetBool(SPI_getbinval(SPI_tuptable->vals[0],
+								   SPI_tuptable->tupdesc,
+								   1, &isnull)))
 	{
 		log_info("Configuration changes recorded");
 	}
@@ -284,7 +292,11 @@ execute_pg_settings_logger(config_log_objects *objects) {
 }
 
 
+#if PG_VERSION_NUM >= 100000
+void
+#else
 static void
+#endif
 config_log_main(Datum main_arg)
 {
 	config_log_objects	   *objects;
@@ -296,7 +308,11 @@ config_log_main(Datum main_arg)
 	BackgroundWorkerUnblockSignals();
 
 	/* Connect to database */
+#if PG_VERSION_NUM >= 110000
+	BackgroundWorkerInitializeConnection(config_log_database, NULL, 0);
+#else
 	BackgroundWorkerInitializeConnection(config_log_database, NULL);
+#endif
 
 	/* Verify expected objects exist */
 	objects = initialize_objects();
@@ -305,10 +321,24 @@ config_log_main(Datum main_arg)
 	{
 		int		rc;
 
+#if (PG_VERSION_NUM >= 100000)
+		rc = WaitLatch(MyLatch,
+					   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
+					   100000L,
+					   PG_WAIT_EXTENSION);
+		ResetLatch(MyLatch);
+#elif (PG_VERSION_NUM >= 90500)
+		rc = WaitLatch(MyLatch,
+					   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
+					   100000L);
+		ResetLatch(MyLatch);
+#else
 		rc = WaitLatch(&MyProc->procLatch,
 					   WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
 					   100000L);
 		ResetLatch(&MyProc->procLatch);
+#endif
+
 
 		/* emergency bailout if postmaster has died */
 		if (rc & WL_POSTMASTER_DEATH)
@@ -365,21 +395,47 @@ _PG_init(void)
 		NULL
     );
 
-	/* register the worker processes */
+	/*
+	 * Register the worker processes.
+	 *
+	 * For details see: https://www.postgresql.org/docs/current/bgworker.html
+	 *
+	 * Note that the API has changed over time.
+	 */
+	memset(&worker, 0, sizeof(worker));
+
 	worker.bgw_flags = BGWORKER_SHMEM_ACCESS |
 		BGWORKER_BACKEND_DATABASE_CONNECTION;
 	worker.bgw_start_time = BgWorkerStart_RecoveryFinished;
-	worker.bgw_main = config_log_main;
-
 	worker.bgw_restart_time = 1;
+
+
+#if (PG_VERSION_NUM >= 100000)
+	sprintf(worker.bgw_library_name, "config_log");
+	sprintf(worker.bgw_function_name, "config_log_main");
+
 	worker.bgw_main_arg = (Datum) 0;
+
+	/* these values are shown in the process list */
+	snprintf(worker.bgw_name, BGW_MAXLEN, "config_log worker");
+
+#if (PG_VERSION_NUM >= 110000)
+	snprintf(worker.bgw_type, BGW_MAXLEN, "config_log");
+#endif
+
+	RegisterBackgroundWorker(&worker);
+#else
+	/* this value is shown in the process list */
+	snprintf(worker.bgw_name, BGW_MAXLEN, "config_log");
+
+	worker.bgw_main = config_log_main;
+	worker.bgw_main_arg = (Datum) 0;
+#endif
 
 #if PG_VERSION_NUM >= 90400
 	worker.bgw_notify_pid = 0;
 #endif
 
-	/* this value is shown in the process list */
-	snprintf(worker.bgw_name, BGW_MAXLEN, "config_log");
 
 	RegisterBackgroundWorker(&worker);
 }

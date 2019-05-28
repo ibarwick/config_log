@@ -144,10 +144,10 @@ initialize_objects(void)
             AND table_name ='%s'\
             AND table_type='BASE TABLE'",
 		config_log_schema,
-		objects->table_name
-		);
+		objects->table_name);
 
 	ret = SPI_execute(buf.data, true, 0);
+
 	if (ret != SPI_OK_SELECT)
 	{
          ereport(FATAL,
@@ -180,7 +180,6 @@ initialize_objects(void)
 	}
 
 	/* check function pg_settings_logger() exists */
-
 	resetStringInfo(&buf);
 
 	appendStringInfo(
@@ -191,10 +190,11 @@ initialize_objects(void)
             AND n.nspname='%s' \
             AND p.pronargs = 0",
 		objects->function_name,
-		config_log_schema
-		);
+		config_log_schema);
 
 	ret = SPI_execute(buf.data, true, 0);
+	pfree(buf.data);
+
 	if (ret != SPI_OK_SELECT)
 	{
          ereport(FATAL,
@@ -260,6 +260,9 @@ execute_pg_settings_logger(config_log_objects *objects) {
 		objects->function_name);
 
 	ret = SPI_execute(buf.data, false, 0);
+
+	pfree(buf.data);
+
 	if (ret != SPI_OK_SELECT)
 	{
 		elog(FATAL, "SPI_execute failed: error code %d", ret);

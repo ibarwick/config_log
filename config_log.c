@@ -12,7 +12,7 @@
  * Written by Ian Barwick
  * barwick@gmail.com
  *
- * Copyright 2013 Ian Barwick. This program is Free
+ * Copyright 2013 - 2019 Ian Barwick. This program is Free
  * Software; see the README.md file for the license conditions.
  */
 
@@ -83,8 +83,11 @@ config_log_sigterm(SIGNAL_ARGS)
 static void
 config_log_sighup(SIGNAL_ARGS)
 {
-	log_info("received sighup");
+	int			save_errno = errno;
+
 	got_sighup = true;
+
+	log_info("received sighup");
 
 #if PG_VERSION_NUM >= 90500
 	SetLatch(MyLatch);
@@ -92,15 +95,16 @@ config_log_sighup(SIGNAL_ARGS)
 	if (MyProc)
 		SetLatch(&MyProc->procLatch);
 #endif
+
+	errno = save_errno;
 }
 
 static void
 log_info(char *msg) {
 	ereport(LOG,
-      (errmsg("%s: %s",
-        MyBgworkerEntry->bgw_name,
-        msg
-    )));
+			(errmsg("%s: %s",
+					MyBgworkerEntry->bgw_name,
+					msg)));
 }
 
 
@@ -147,8 +151,7 @@ initialize_objects(void)
 	if (ret != SPI_OK_SELECT)
 	{
          ereport(FATAL,
-           (errmsg("SPI_execute failed: SPI error code %d", ret)
-            ));
+				 (errmsg("SPI_execute failed: SPI error code %d", ret)));
 	}
 
     /* This should never happen */
@@ -170,12 +173,10 @@ initialize_objects(void)
 	if (ntup == 0)
 	{
         ereport(FATAL,
-          (
-            errmsg("Expected config log table '%s.%s' not found", config_log_schema,
-              objects->table_name),
-            errhint("Ensure superuser search_path includes the schema used by config_log; "
-              "check config_log.* GUC settings")
-           ));
+				(errmsg("expected config log table '%s.%s' not found", config_log_schema,
+						objects->table_name),
+				 errhint("ensure superuser search_path includes the schema used by config_log; "
+						 "check config_log.* GUC settings")));
 	}
 
 	/* check function pg_settings_logger() exists */
@@ -197,7 +198,7 @@ initialize_objects(void)
 	if (ret != SPI_OK_SELECT)
 	{
          ereport(FATAL,
-           (errmsg("SPI_execute failed: SPI error code %d", ret)));
+				 (errmsg("SPI_execute failed: SPI error code %d", ret)));
 	}
 
 	if (SPI_processed != 1)
@@ -216,12 +217,10 @@ initialize_objects(void)
 	if (ntup == 0)
 	{
         ereport(FATAL,
-          (
-            errmsg("Expected config log function '%s.%s' not found", config_log_schema,
-              objects->function_name),
-            errhint("Ensure superuser search_path includes the schema used by config_log; "
-              "check config_log.* GUC settings")
-           ));
+				(errmsg("expected config log function '%s.%s' not found", config_log_schema,
+						objects->function_name),
+				 errhint("ensure superuser search_path includes the schema used by config_log; "
+						 "check config_log.* GUC settings")));
 	}
 
    	SPI_finish();
@@ -258,8 +257,7 @@ execute_pg_settings_logger(config_log_objects *objects) {
 		&buf,
 		"SELECT %s.%s()",
 		config_log_schema,
-		objects->function_name
-		);
+		objects->function_name);
 
 	ret = SPI_execute(buf.data, false, 0);
 	if (ret != SPI_OK_SELECT)
@@ -278,11 +276,11 @@ execute_pg_settings_logger(config_log_objects *objects) {
 								   SPI_tuptable->tupdesc,
 								   1, &isnull)))
 	{
-		log_info("Configuration changes recorded");
+		log_info("configuration changes recorded");
 	}
 	else
 	{
-		log_info("No configuration changes detected");
+		log_info("no configuration changes detected");
 	}
 
    	SPI_finish();
@@ -423,7 +421,6 @@ _PG_init(void)
 	snprintf(worker.bgw_type, BGW_MAXLEN, "config_log");
 #endif
 
-	RegisterBackgroundWorker(&worker);
 #else
 	/* this value is shown in the process list */
 	snprintf(worker.bgw_name, BGW_MAXLEN, "config_log");
@@ -435,7 +432,6 @@ _PG_init(void)
 #if PG_VERSION_NUM >= 90400
 	worker.bgw_notify_pid = 0;
 #endif
-
 
 	RegisterBackgroundWorker(&worker);
 }

@@ -2,7 +2,7 @@
 -- complain if script is sourced in psql, rather than via CREATE EXTENSION
 \echo Use "CREATE EXTENSION config_log" to load this file. \quit
 
-CREATE TABLE pg_settings_log AS 
+CREATE TABLE pg_settings_log AS
  SELECT name,
         setting,
         unit,
@@ -43,17 +43,17 @@ BEGIN
       FROM pg_settings ps
 INNER JOIN pg_settings_log_current psl ON (psl.name=ps.name AND psl.setting != ps.setting)
      WHERE ps.source ='configuration file'
-        UNION 
+        UNION
     SELECT 'INSERT' AS op,
            ps.name,
            ps.setting,
            ps.unit,
            ps.sourcefile,
            ps.sourceline
-      FROM pg_settings ps 
+      FROM pg_settings ps
      WHERE ps.source ='configuration file'
        AND NOT EXISTS (SELECT NULL
-                         FROM pg_settings_log_current psl 
+                         FROM pg_settings_log_current psl
                         WHERE psl.name = ps.name
                       )
         UNION
@@ -64,14 +64,14 @@ INNER JOIN pg_settings_log_current psl ON (psl.name=ps.name AND psl.setting != p
            psl.sourcefile,
            psl.sourceline
       FROM pg_settings_log_current psl
-     WHERE EXISTS (SELECT NULL 
+     WHERE EXISTS (SELECT NULL
                          FROM pg_settings ps
                         WHERE ps.name = psl.name
                           AND ps.source ='default'
                       )
        AND psl.op != 'DELETE'
 
-    LOOP 
+    LOOP
       INSERT INTO pg_settings_log
                  (name,
                   setting,
@@ -98,4 +98,3 @@ $$;
 REVOKE ALL ON pg_settings_log FROM public;
 REVOKE ALL ON pg_settings_log_current FROM public;
 REVOKE ALL ON FUNCTION pg_settings_logger() FROM public;
-

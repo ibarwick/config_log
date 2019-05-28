@@ -39,14 +39,14 @@ Once `config_log` is compiled and installed, it needs to be added to a database
 in the PostgreSQL database cluster whose `postgresql.conf` you wish to monitor.
 It can only be installed in one database within the cluster.
 
-By default, config_log expects to be installed into the default `postgres`
+By default, `config_log` expects to be installed into the default `postgres`
 database's `public` schema. The default values can be overridden by changing
 the following GUC settings:
 
     config_log.database = 'some_other_db'
     config_log.schema   = 'different_schema'
 
-Note that the schema must appear in the superuser's search path.
+Note that the schema *must* appear in the superuser's search path.
 
 Connect to the target database as a superuser and execute:
 
@@ -66,7 +66,7 @@ Following a successful startup, it will output the following:
 
     LOG:  config_log: initialized, database objects validated
     LOG:  config_log: pg_settings_logger() executed
-    LOG:  config_log: No configuration changes detected
+    LOG:  config_log: no configuration changes detected
 
 Following a SIGHUP, it will output something like the following:
 
@@ -74,7 +74,7 @@ Following a SIGHUP, it will output something like the following:
     LOG:  parameter "temp_buffers" changed to "64MB"
     LOG:  config_log: received sighup
     LOG:  config_log: pg_settings_logger() executed
-    LOG:  config_log: Configuration changes recorded
+    LOG:  config_log: configuration changes recorded
 
 
 Usage
